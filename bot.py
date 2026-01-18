@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import os
 
 TOKEN = os.getenv('TELEGRAM_TOKEN')
+# Qui metteremo il nome del canale (es: @MioCanale)
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 BACHECHE = [
@@ -15,23 +16,19 @@ BACHECHE = [
 def get_anteprima(url, headers):
     try:
         res = requests.get(url, headers=headers, timeout=15)
-        if res.status_code != 200: return "Dettagli disponibili nel link."
         soup = BeautifulSoup(res.text, 'html.parser')
-        corpo = (soup.find('div', class_='field-name-body') or 
-                 soup.find('div', id='parent-fieldname-text') or 
-                 soup.find('article') or 
-                 soup.find('div', class_='region-content'))
+        # Selettori originali che funzionavano
+        corpo = soup.find('div', class_='field-name-body') or soup.find('div', id='parent-fieldname-text') or soup.find('article')
+        if not corpo: corpo = soup.find('div', class_='region-content')
         if corpo:
             for s in corpo(['script', 'style']): s.decompose()
             testo = corpo.get_text(separator=' ', strip=True)
-            # Se il testo contiene l'errore "non è stata trovata", non lo inviamo
-            if "non è stata trovata" in testo: return "Clicca il link per i dettagli."
             return testo[:350] + "..." if len(testo) > 350 else testo
         return "Dettagli disponibili nel link."
     except: return ""
 
 def check():
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
     for b in BACHECHE:
         try:
             res = requests.get(b['url'], headers=headers, timeout=20)
@@ -41,32 +38,25 @@ def check():
             
             avviso = None
             for l in links:
-                href = l['href'].lower()
-                testo = l.get_text(strip=True)
-                
-                # Filtro più severo: deve essere un link di avviso ma NON deve essere il titolo della pagina stessa
-                if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/news/', '/avviso']) and len(testo) > 15:
-                    # Escludiamo i link "finti" che portano all'errore 404
-                    blacklist = ['avvisi docente', 'avvisi didattica', 'elenco-news', '/home', 'tutti i servizi']
-                    if not any(word in testo.lower() for word in blacklist):
+                href = l['href']
+                # Aggiunto '/avviso/' (singolare) per catturare gli avvisi dei singoli prof
+                if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/news/', '/avviso/']) and len(l.text) > 15:
+                    # Escludiamo il link alla pagina stessa degli avvisi docenti per evitare l'errore 404
+                    if not any(href.lower().endswith(x) for x in ['/home', '/elenco-news', '/news', '/avvisi-docente']):
                         avviso = l
                         break
-
             if not avviso: continue
 
             titolo = avviso.get_text(strip=True)
-            link_pieno = avviso['href'] if avviso['href'].startswith('http') else ("https://www.unict.it" if "unict.it" in b['url'] else "https://www.dei.unict.it") + avviso['href']
+            link = avviso['href'] if avviso['href'].startswith('http') else ("https://www.unict.it" if "unict.it/it" in b['url'] else "https://www.dei.unict.it") + avviso['href']
             
             ultimo = ""
             if os.path.exists(b['file']):
                 with open(b['file'], "r", encoding="utf-8") as f: ultimo = f.read().strip()
 
             if titolo != ultimo:
-                txt = get_anteprima(link_pieno, headers)
-                # Evitiamo di mandare messaggi di errore
-                if "non è stata trovata" in txt: continue
-                
-                msg = f"{b['emoji']} *{b['nome']}: {titolo}*\n\n{txt}\n\n🔗 [Leggi avviso completo]({link_pieno})"
+                txt = get_anteprima(link, headers)
+                msg = f"{b['emoji']} *{b['nome']}: {titolo}*\n\n{txt}\n\n🔗 [Leggi avviso completo]({link})"
                 requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
                 with open(b['file'], "w", encoding="utf-8") as f: f.write(titolo)
         except Exception as e: print(f"Errore {b['nome']}: {e}")
