@@ -19,7 +19,7 @@ def get_anteprima(url, headers):
         if res.status_code != 200: return "Dettagli disponibili nel link."
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        # Selettori per trovare il testo vero dell'avviso
+        # 1. Prova con i selettori standard
         corpo = (soup.find('div', class_='field-name-body') or 
                  soup.find('div', class_='field-item even') or
                  soup.find('div', id='parent-fieldname-text') or 
@@ -29,10 +29,20 @@ def get_anteprima(url, headers):
         if corpo:
             for s in corpo(['script', 'style']): s.decompose()
             testo = corpo.get_text(separator=' ', strip=True)
-            if "non è stata trovata" in testo.lower(): return "Contenuto nel link."
+        else:
+            # 2. Fallback: se non trova il "corpo", prende tutto il testo utile
+            # ma pulisce i menu (che di solito sono in alto)
+            testo_completo = soup.get_text(separator=' ', strip=True)
+            # Tagliamo via i primi 500 caratteri (menu/intestazione) per cercare il contenuto vero
+            testo = testo_completo[500:] if len(testo_completo) > 500 else testo_completo
+
+        if len(testo) > 20:
             return testo[:350] + "..." if len(testo) > 350 else testo
+        
         return "Contenuto disponibile nel link."
-    except: return ""
+    except:
+        return ""
+
 
 def check():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
