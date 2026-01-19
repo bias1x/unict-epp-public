@@ -8,7 +8,7 @@ CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 # Configurazione bacheche (ora monitoriamo anche il Prof. Siviero singolarmente)
 BACHECHE = [
     {"nome": "EPP", "url": "https://www.dei.unict.it/corsi/lm-56-epp/avvisi", "file": "pub_epp.txt", "emoji": "🔔"},
-    {"nome": "Prof. Siviero", "url": "https://www.dei.unict.it/corsi/lm-56-epp/docenti/uid.dWtKQ08vZkRRVlJJaTNkUDdGY3U3WnJLam1SM2RrQS92R3NybUlHZUpUVT0=#tab4", "file": "pub_siviero.txt", "emoji": "📝"},
+    {"nome": "Docenti", "url": "https://www.dei.unict.it/corsi/lm-56/avvisi-docente", "file": "pub_siviero.txt", "emoji": "📝"},
     {"nome": "DEI", "url": "https://www.dei.unict.it/Comunicazioni/elenco-news", "file": "pub_dei.txt", "emoji": "🏛️"},
     {"nome": "UNICT", "url": "https://www.unict.it/it/ateneo/news", "file": "pub_unict.txt", "emoji": "🌐"}
 ]
