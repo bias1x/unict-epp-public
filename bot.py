@@ -5,10 +5,10 @@ import os
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-# Configurazione bacheche (ora monitoriamo anche il Prof. Siviero singolarmente)
+# Configurazione con il link "vecchio" che usano i prof
 BACHECHE = [
     {"nome": "EPP", "url": "https://www.dei.unict.it/corsi/lm-56-epp/avvisi", "file": "pub_epp.txt", "emoji": "🔔"},
-    {"nome": "Docenti", "url": "https://www.dei.unict.it/corsi/lm-56/avvisi-docente", "file": "pub_siviero.txt", "emoji": "📝"},
+    {"nome": "Docenti", "url": "https://www.dei.unict.it/corsi/lm-56/avvisi-docente", "file": "pub_docenti.txt", "emoji": "👨‍🏫"},
     {"nome": "DEI", "url": "https://www.dei.unict.it/Comunicazioni/elenco-news", "file": "pub_dei.txt", "emoji": "🏛️"},
     {"nome": "UNICT", "url": "https://www.unict.it/it/ateneo/news", "file": "pub_unict.txt", "emoji": "🌐"}
 ]
@@ -18,63 +18,51 @@ def get_anteprima(url, headers):
         res = requests.get(url, headers=headers, timeout=15)
         if res.status_code != 200: return "Dettagli disponibili nel link."
         soup = BeautifulSoup(res.text, 'html.parser')
-        
-        # 1. Prova con i selettori standard
         corpo = (soup.find('div', class_='field-name-body') or 
                  soup.find('div', class_='field-item even') or
                  soup.find('div', id='parent-fieldname-text') or 
                  soup.find('article') or 
                  soup.find('div', class_='region-content'))
-        
         if corpo:
             for s in corpo(['script', 'style']): s.decompose()
             testo = corpo.get_text(separator=' ', strip=True)
-        else:
-            # 2. Fallback: se non trova il "corpo", prende tutto il testo utile
-            # ma pulisce i menu (che di solito sono in alto)
-            testo_completo = soup.get_text(separator=' ', strip=True)
-            # Tagliamo via i primi 500 caratteri (menu/intestazione) per cercare il contenuto vero
-            testo = testo_completo[500:] if len(testo_completo) > 500 else testo_completo
-
-        if len(testo) > 20:
             return testo[:350] + "..." if len(testo) > 350 else testo
-        
         return "Contenuto disponibile nel link."
-    except:
-        return ""
-
+    except: return "Dettagli disponibili nel link."
 
 def check():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     for b in BACHECHE:
         try:
-            print(f"Controllo: {b['nome']}")
             res = requests.get(b['url'], headers=headers, timeout=20)
             soup = BeautifulSoup(res.text, 'html.parser')
-            
-            # Cerchiamo nell'area centrale della pagina
             area = soup.find('section', id='main-content') or soup.find('div', class_='region-content') or soup
             links = area.find_all('a', href=True)
             
             avviso = None
             for l in links:
                 href = l['href']
-                testo = l.get_text(strip=True)
-                
-                # FILTRO AGGIORNATO (Riga 40): inclusi /content/ e /avviso/
+                testo_link = l.get_text(strip=True)
+                # Includiamo /content/ e /avviso/
                 if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/news/', '/avviso/', '/content/']):
-                    if len(testo) > 15:
-                        # Ignoriamo i link fissi dei menu
-                        blacklist = ['avvisi del corso', 'avvisi docente', 'elenco-news', 'home', 'didattica']
-                        if not any(word in testo.lower() for word in blacklist):
-                            avviso = l
-                            break
-            
-            if not avviso: continue
+                    if len(testo_link) > 15 and not any(x in testo_link.lower() for x in ['home', 'elenco', 'avvisi docente']):
+                        avviso = l
+                        break
 
+            if not avviso: continue
             titolo = avviso.get_text(strip=True)
-            # Costruzione link pieno
-            link_pieno = avviso['href'] if avviso['href'].startswith('http') else ("https://www.unict.it" if "unict.it" in b['url'] else "https://www.dei.unict.it") + avviso['href']
+            href = avviso['href']
+
+            # COSTRUZIONE LINK INTELLIGENTE (Risolve il 404)
+            if href.startswith('http'):
+                link_pieno = href
+            elif href.startswith('/content/'):
+                # Se il link è un contenuto generico, va quasi sempre sul sito centrale UNICT
+                link_pieno = "https://www.unict.it" + href
+            else:
+                # Altrimenti usa il prefisso della bacheca di origine
+                base = "https://www.unict.it" if "unict.it" in b['url'] and "dei." not in b['url'] else "https://www.dei.unict.it"
+                link_pieno = base + href
             
             ultimo = ""
             if os.path.exists(b['file']):
@@ -82,16 +70,11 @@ def check():
 
             if titolo != ultimo:
                 txt = get_anteprima(link_pieno, headers)
-                if "non è stata trovata" in txt.lower(): continue
-                
                 msg = f"{b['emoji']} *{b['nome']}: {titolo}*\n\n{txt}\n\n🔗 [Leggi avviso completo]({link_pieno})"
                 res_tg = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
-                
-                # Salviamo il titolo solo se l'invio è riuscito
                 if res_tg.status_code == 200:
                     with open(b['file'], "w", encoding="utf-8") as f: f.write(titolo)
-        except Exception as e: 
-            print(f"Errore {b['nome']}: {e}")
+        except Exception as e: print(f"Errore {b['nome']}: {e}")
 
 if __name__ == "__main__":
     check()
