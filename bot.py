@@ -8,7 +8,7 @@ CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 BACHECHE = [
     {"nome": "EPP", "url": "https://www.dei.unict.it/corsi/lm-56-epp/avvisi", "file": "pub_epp.txt", "emoji": "🔔"},
-    {"nome": "DEI", "url": "https://www.dei.unict.it/Comunicazioni/elenco-news", "file": "pub_dei.txt", "emoji": "🏛️"},
+    {"nome": "DEI [Notizie]", "url": "https://www.dei.unict.it/Comunicazioni/elenco-news", "file": "pub_dei.txt", "emoji": "🏛️"},
     {"nome": "DEI [Eventi]", "url": "https://www.dei.unict.it/Comunicazioni/elenco-eventi_dei", "file": "pub_dei_eventi.txt", "emoji": "🏛️"},
     {"nome": "UNICT", "url": "https://www.unict.it/it/ateneo/news", "file": "pub_unict.txt", "emoji": "🌐"},
     {"nome": "Prof. Barone", "url": "https://www.dei.unict.it/corsi/lm-56-epp/docenti/uid.amxrSnRCMUs2TmhXandDMGM4VllTNXJLam1SM2RrQS92R3NybUlHZUpUVT0=?archivio-avvisi", "file": "pub_barone.txt", "emoji": "🏃🏻‍♂️"},
