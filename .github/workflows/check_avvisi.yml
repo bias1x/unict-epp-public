@@ -1,7 +1,7 @@
 name: Public Bot Unict
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/6 * * * *'
   workflow_dispatch:
 
 jobs:
