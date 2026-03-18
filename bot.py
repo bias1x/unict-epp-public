@@ -39,7 +39,8 @@ def check():
             avviso = None
             for l in links:
                 href = l['href']
-                if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/content/', '/lezioni/', '/esami/, '/news/']) and len(l.text) > 15:
+                parole_chiave = ['/comunicazioni/', '/avvisi/', '/content/', '/lezioni/', '/esami/', '/news/']
+                if any(x in href for x in parole_chiave) and len(l.text) > 10:
                     if not any(href.lower().endswith(x) for x in ['/home', '/elenco-news', '/news', '/avvisi-docente']):
                         avviso = l
                         break
