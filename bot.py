@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import os
 
 TOKEN = os.getenv('TELEGRAM_TOKEN')
+# Qui metteremo il nome del canale (es: @MioCanale)
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 BACHECHE = [
@@ -34,39 +35,27 @@ def check():
             area = soup.find('section', id='main-content') or soup.find('div', class_='region-content') or soup
             links = area.find_all('a', href=True)
             
-            # --- MODIFICA 1: Legge tutta la cronologia nel file ---
-            cronologia = []
-            if os.path.exists(b['file']):
-                with open(b['file'], "r", encoding="utf-8") as f:
-                    cronologia = [line.strip() for line in f.readlines()]
-
             avviso = None
             for l in links:
                 href = l['href']
-                if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/lezioni/', '/esami/', '/content/', '/news/']) and len(l.text) > 15:
+                if any(x in href for x in ['/comunicazioni/', '/avvisi/', '/content/', '/lezioni/', '/esami/', '/news/']) and len(l.text) > 15:
                     if not any(href.lower().endswith(x) for x in ['/home', '/elenco-news', '/news', '/avvisi-docente']):
-                        
-                        titolo_attuale = l.get_text(strip=True)
-                        # --- MODIFICA 2: Controllo se è già stato inviato in passato ---
-                        if titolo_attuale not in cronologia:
-                            avviso = l
-                            break # MANTENIAMO IL BREAK A 1 (guarda solo il primo nuovo)
-            
+                        avviso = l
+                        break
             if not avviso: continue
 
             titolo = avviso.get_text(strip=True)
             link = avviso['href'] if avviso['href'].startswith('http') else ("https://www.unict.it" if "unict.it/it" in b['url'] else "https://www.dei.unict.it") + avviso['href']
             
-            txt = get_anteprima(link, headers)
-            msg = f"{b['emoji']} *{b['nome']}: {titolo}*\n\n{txt}\n\n🔗 [Leggi avviso completo]({link})"
-            
-            r = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
-            
-            # Se l'invio è riuscito, aggiunge il titolo al file (append "a")
-            if r.status_code == 200:
-                with open(b['file'], "a", encoding="utf-8") as f:
-                    f.write(titolo + "\n")
-                    
+            ultimo = ""
+            if os.path.exists(b['file']):
+                with open(b['file'], "r", encoding="utf-8") as f: ultimo = f.read().strip()
+
+            if titolo != ultimo:
+                txt = get_anteprima(link, headers)
+                msg = f"{b['emoji']} *{b['nome']}: {titolo}*\n\n{txt}\n\n🔗 [Leggi avviso completo]({link})"
+                requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
+                with open(b['file'], "w", encoding="utf-8") as f: f.write(titolo)
         except Exception as e: print(f"Errore {b['nome']}: {e}")
 
 if __name__ == "__main__":
