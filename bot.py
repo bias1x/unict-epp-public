@@ -3,9 +3,11 @@ from bs4 import BeautifulSoup
 import os
 
 TOKEN = os.getenv('TELEGRAM_TOKEN')
-# Qui metteremo il nome del canale (es: @MioCanale)
+#Qui metteremo il nome del canale telegram al quale i ragazzi si iscrivono
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+#successivamente inseriamo quali bacheche (i link) devono essere visionate dal bot per gli avvisi. possiamo mettere anche delle icone -
+#per rendere piu carino e riconoscibile l'avviso.
 BACHECHE = [
     {"nome": "EPP", "url": "https://www.dei.unict.it/corsi/lm-56-epp/avvisi", "file": "pub_epp.txt", "emoji": "🔔"},
     {"nome": "DEI", "url": "https://www.dei.unict.it/Comunicazioni/elenco-news", "file": "pub_dei.txt", "emoji": "🏛️"},
@@ -13,6 +15,7 @@ BACHECHE = [
     {"nome": "Docenti", "url": "https://www.dei.unict.it/corsi/lm-56-epp/avvisi-docente", "file": "pub_docenti.txt", "emoji": "👩🏻‍🏫"}
 ]
 
+#qui la struttura del messaggio
 def get_anteprima(url, headers):
     try:
         res = requests.get(url, headers=headers, timeout=15)
@@ -26,6 +29,8 @@ def get_anteprima(url, headers):
         return "Dettagli disponibili nel link."
     except: return ""
 
+#qui avviene la ricerca da parte del bot di quali avvisi deve inoltrare sul canale telegram, ignorando quelli gia mandati in precedenza, -
+#ricercando tramite parole chiave + formattazione del messaggio nel canale telegram
 def check():
     headers = {'User-Agent': 'Mozilla/5.0'}
     for b in BACHECHE:
